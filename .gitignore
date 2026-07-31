@@ -1,0 +1,9 @@
+build/
+*.o
+*.so
+*.csv
+*.jsonl
+*.nsys-rep
+*.ncu-rep
+__pycache__/
+.pytest_cache/
