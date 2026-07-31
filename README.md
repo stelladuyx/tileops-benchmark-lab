@@ -37,6 +37,8 @@ TileOps 的 benchmark 规范。当前阶段只发布 CUPTI 官方资料梳理和
 - `docs/01-cupti-official-map.md`：官方入口、API 地图、版本差异和推荐阅读顺序。
 - `docs/02-tileops-benchmark-policy-draft.md`：基于 CUPTI 第一轮调研形成的
   benchmark 方针草案。
+- `docs/03-other-project-benchmark-observations.md`：TileLang、FlashAttention
+  的 benchmark 做法，以及仍需决定的测量条目。
 - `notes/2026-07-31-cupti-first-pass.md`：本次探索记录和待验证问题。
 
 本机 CUDA 12.9 的官方 C/C++ samples 位于：
