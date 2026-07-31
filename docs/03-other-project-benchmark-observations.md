@@ -121,6 +121,12 @@ benchmark_all
 说明，它会执行 warmup，并在需要时同步 accelerator。同步发生在计时边界，
 不是每次 statement 后都单独同步。
 
+这里的 `.mean` 不是 `repeats` 个独立 latency samples 的均值。普通
+`Timer.timeit(repeats)` 只正式测量一个包含 `repeats` 次 statement 的同步
+wall-time block，再将 block time 除以 `repeats`。它使用带 accelerator
+synchronize 的 host clock，不使用 CUDA Event 或 CUPTI。完整源码分析见
+[PyTorch Timer 的 GPU 测量语义](04-pytorch-timer-measurement.md)。
+
 具体边界：
 
 - forward：计时调用 forward function，包含 helper 中的 autocast context；

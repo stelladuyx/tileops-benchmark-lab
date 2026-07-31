@@ -39,6 +39,8 @@ TileOps 的 benchmark 规范。当前阶段只发布 CUPTI 官方资料梳理和
   benchmark 方针草案。
 - `docs/03-other-project-benchmark-observations.md`：TileLang、FlashAttention
   的 benchmark 做法，以及仍需决定的测量条目。
+- `docs/04-pytorch-timer-measurement.md`：PyTorch Timer 的同步 wall-clock
+  计时、block 归一化和它与 CUPTI/CUDA Event 的区别。
 - `notes/2026-07-31-cupti-first-pass.md`：本次探索记录和待验证问题。
 
 本机 CUDA 12.9 的官方 C/C++ samples 位于：
