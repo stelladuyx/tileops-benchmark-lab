@@ -4,6 +4,14 @@
 TileOps 的 benchmark 规范。当前阶段只发布 CUPTI 官方资料梳理和初步方针；
 计时方案尚未定案。
 
+## 先从这里开始
+
+[TileOps 当前怎样计时](docs/00-current-tileops-benchmark.md)：
+
+- 主路径是 `torch.profiler -> Kineto -> CUPTI`；
+- fallback 判断的是成功投影的标注窗口数，而不是 kernel 数；
+- 默认窗口覆盖率低于 80% 时，改用 CUDA Event 重测。
+
 ## 当前结论
 
 - CUPTI 不是一种单独的计时方法，而是一组 tracing、profiling 和 sampling
@@ -24,6 +32,8 @@ TileOps 的 benchmark 规范。当前阶段只发布 CUPTI 官方资料梳理和
 
 ## 仓库结构
 
+- `docs/00-current-tileops-benchmark.md`：当前 TileOps 的 CUPTI/Kineto 主路径和
+  CUDA Event fallback 条件。
 - `docs/01-cupti-official-map.md`：官方入口、API 地图、版本差异和推荐阅读顺序。
 - `docs/02-tileops-benchmark-policy-draft.md`：基于 CUPTI 第一轮调研形成的
   benchmark 方针草案。
