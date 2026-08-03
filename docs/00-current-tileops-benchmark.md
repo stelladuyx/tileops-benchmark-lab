@@ -50,6 +50,11 @@ trace 解析分两步：
 
 最后返回所有 trial mean 的中位数，单位为毫秒。
 
+这里的 GPU projected window 只负责过滤/attribution；最终结果仍然是窗口内
+activity duration sum，不是 window 本身的 start-to-end span。CPU annotation、
+GPU projection、CUPTI activity record 以及 sum/span 的区别见
+[Kineto 的 CPU scope、GPU projection 与 activity 归约](05-kineto-windows-and-reductions.md)。
+
 ## 什么时候 fallback
 
 设：
@@ -75,6 +80,11 @@ n_regions >= ceil(n_repeat * 0.8)
 
 如果窗口数没有达到 `n_repeat`、但仍达到阈值，当前实现继续采用 CUPTI，
 并以实际成功投影的 `n_regions` 为分母。
+
+需要注意，Kineto 的 GPU user annotation projection 按 device/stream 和
+correlation 组织；一个 logical repeat 在多 stream 情况下可能对应多个 GPU
+projected windows。因此 `n_regions == logical repeats` 是当前实现依赖、但仍需
+实验验证的假设。
 
 ## kernel 数量扮演什么角色
 
@@ -112,6 +122,10 @@ mean 的中位数，并将 `_bench_meta.timing` 标为 `cuda-events`。主路径
 - `_sum_kernel_time_us` 实际筛选条件是“CUDA device event 且不是 user
   annotation”，没有进一步检查 event category 必须是 kernel。若被测 op
   在窗口内包含 memcpy 等 device activity，也可能被计入。
+- activity inclusion 当前只检查 activity start 落入 projected window，没有
+  要求 activity end 也在 window 内。
+- `n_regions` 不一定天然等于 logical repeat 数；多 stream projection 可能使
+  一个 CPU annotation 对应多个 GPU projected windows。
 - fallback 由 annotation projection coverage 触发，不能证明已经捕获的窗口
   是无偏样本。
 - 当前日志中关于 CUDA Event 对短 kernel 造成固定 50–60 us、6–7 倍膨胀的

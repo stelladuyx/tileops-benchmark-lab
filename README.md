@@ -41,6 +41,8 @@ TileOps 的 benchmark 规范。当前阶段只发布 CUPTI 官方资料梳理和
   的 benchmark 做法，以及仍需决定的测量条目。
 - `docs/04-pytorch-timer-measurement.md`：PyTorch Timer 的同步 wall-clock
   计时、block 归一化和它与 CUPTI/CUDA Event 的区别。
+- `docs/05-kineto-windows-and-reductions.md`：区分 CPU logical scope、Kineto
+  GPU projection、CUPTI activity records，以及 sum/span reduction。
 - `experiments/01_sol_cupti_span/`：在物理 GPU 1 上对比 SOL selected span、
   activity duration sum 和 CUDA Event，并验证动态 activity attribution。
 - `notes/2026-07-31-cupti-first-pass.md`：本次探索记录和待验证问题。
