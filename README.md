@@ -50,6 +50,8 @@ TileOps 的 benchmark 规范。当前阶段只发布 CUPTI 官方资料梳理和
   per-case 判定标准。
 - `experiments/01_sol_cupti_span/`：在物理 GPU 1 上对比 SOL selected span、
   activity duration sum 和 CUDA Event，并验证动态 activity attribution。
+- `experiments/02_sol_applicability/`：SOL single/multi-kernel Phase A
+  ground-truth runner 和 strict activity validator。
 - `notes/2026-07-31-cupti-first-pass.md`：本次探索记录和待验证问题。
 
 本机 CUDA 12.9 的官方 C/C++ samples 位于：
