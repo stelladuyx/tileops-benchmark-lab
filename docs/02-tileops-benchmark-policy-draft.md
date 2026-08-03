@@ -62,6 +62,14 @@ activity duration 求和”、CUDA Event span 和同步 host wall time 都不是
 measurement contract。是否复用它的实现、只复现其方法，或把它作为独立交叉
 验证基线，仍需实验决定。
 
+GPU 1 上的第一轮
+[SOL CUPTI span 实验](../experiments/01_sol_cupti_span/RESULTS.md)确认了 span、
+duration sum 和 default-stream Event 在 idle gap、并发及 hidden-stream 场景下
+会产生不同结果。实验还发现：如果正式迭代出现 discovery 未见过的额外合法
+activity，原版 selection 可以将其静默排除而不报错。因此在加入 unexpected
+activity 的 fail-closed 校验前，不应把该 attribution 直接视为适用于动态
+operator 的完整性保证。
+
 ### 慢速深挖路径
 
 Range Profiling、PM Sampling、PC Sampling 和 SASS Metrics 不参与默认 latency
