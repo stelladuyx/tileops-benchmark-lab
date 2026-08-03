@@ -71,7 +71,8 @@ API 使用范式参考。
 2. 一对 CUDA Event 包围多次 launch；
 3. CUPTI Activity concurrent-kernel trace；
 4. 支持时的 CUPTI HES trace；
-5. host wall clock + 显式同步。
+5. SOL Bench 的 discovery + activity attribution + device span；
+6. host wall clock + 显式同步。
 
 输出原始样本、kernel 数量、trace 丢失情况和 profiler-on/off 扰动，再决定
 TileOps 的默认计时器与诊断计时器。

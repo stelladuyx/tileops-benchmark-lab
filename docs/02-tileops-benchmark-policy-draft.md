@@ -8,7 +8,7 @@ TileOps 至少需要三个不同结果，不能都叫 `latency_ms`：
 
 | Contract | 要回答的问题 | 候选测量方式 |
 | --- | --- | --- |
-| device execution | GPU 实际执行所发射 kernel 共用了多久 | CUDA Event batch、CUPTI Activity |
+| device execution | GPU 实际执行所发射 kernel 共用了多久 | CUDA Event batch、CUPTI Activity、SOL Bench |
 | invocation | 用户调用一次 op 到完成的代价是多少 | host wall clock + 明确同步边界 |
 | diagnosis | 为什么这个 kernel 快/慢 | CUPTI Range/PM/PC/SASS 或 Nsight 工具 |
 
@@ -39,6 +39,28 @@ CUPTI Activity 用于：
 `torch.profiler/Kineto` 是 CUPTI 上层 consumer，不等于直接 CUPTI API。
 Kineto 的 annotation projection、trace 边界和 Python/C++ 解析属于额外变量，
 应单独验证。
+
+### SOL Bench 候选路径
+
+NVIDIA SOL-ExecBench 的 CUPTI benchmark 也应作为独立候选，而不是只归入
+“直接 CUPTI Activity”。固定参考 commit
+[`a9fa080`](https://github.com/NVIDIA/SOL-ExecBench/tree/a9fa0804c793d438e70850c33fe34426e66d53dd)：
+
+1. warmup 后先收集一次 activity，用于发现预期的
+   kernel/memcpy/memset 名称、数量和相对顺序；
+2. 正式测量时用 CUPTI CPU timestamps 建立每轮 collection window；
+3. 在窗口内选择与预期序列匹配的 activities，并校验数量；
+4. 用 `max(activity.end) - min(activity.start)` 计算该逻辑调用的 device span。
+
+相关策略实现在
+[`timing.py`](https://github.com/NVIDIA/SOL-ExecBench/blob/a9fa0804c793d438e70850c33fe34426e66d53dd/src/sol_execbench/core/bench/timing.py)，
+CUPTI binding 和 activity collection wrapper 位于
+[`cupti_utils.py`](https://github.com/NVIDIA/SOL-ExecBench/blob/a9fa0804c793d438e70850c33fe34426e66d53dd/src/sol_execbench/core/bench/cupti_utils.py)。
+
+SOL Bench 候选测量的是经过 activity attribution 的 device span；它与“所有
+activity duration 求和”、CUDA Event span 和同步 host wall time 都不是同一个
+measurement contract。是否复用它的实现、只复现其方法，或把它作为独立交叉
+验证基线，仍需实验决定。
 
 ### 慢速深挖路径
 
@@ -85,6 +107,7 @@ CUDA Event timestamp 位于 device stream 上；host launch overhead 是否进�
 - A1：直接 CUPTI Activity concurrent-kernel tracing；
 - A2：CUPTI Activity HES（若支持）；
 - K1：`torch.profiler/Kineto`；
+- S1：SOL Bench CUPTI discovery + activity attribution + device span；
 - W1：host monotonic clock + launch batch + 末尾同步。
 
 N 至少覆盖 1、10、100、1000，并根据总测量时长自适应。
