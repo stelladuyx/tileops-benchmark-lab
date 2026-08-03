@@ -208,7 +208,11 @@ max(activity.end) - min(activity.start)
 ```
 
 CPU timestamps 只用于每轮筛选；最终报告值来自 GPU activity timestamps。见
-[`timing.py`](https://github.com/NVIDIA/SOL-ExecBench/blob/a9fa0804c793d438e70850c33fe34426e66d53dd/src/sol_execbench/core/bench/timing.py)。
+[`timing.py#L195-L207`](https://github.com/NVIDIA/SOL-ExecBench/blob/a9fa0804c793d438e70850c33fe34426e66d53dd/src/sol_execbench/core/bench/timing.py#L195-L207)。
+
+Single/multi-kernel 的统一公式、与 CUDA Event pre/post gap 的区别，以及 CUPTI
+measurement perturbation 单独整理在
+[SOL timing semantics](06-sol-timing-semantics.md)。
 
 ### Triton `do_bench`
 
