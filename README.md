@@ -49,6 +49,9 @@ TileOps 的 benchmark 规范。当前阶段只发布 CUPTI 官方资料梳理和
 - `docs/06-sol-single-multi-applicability-plan.md`：验证 SOL 是否适用于
   single/multi-kernel operator 的分层实验、全量 census、strict validator 和
   per-case 判定标准。
+- `docs/07-flashinfer-flaggems-benchmark-strategies.md`：固定源码整理 FlagGems 与
+  FlashInfer 对小/大/multi-kernel workload 的公共计时路径，重点区分 CUDA Event
+  GPU-side launch/dispatch envelope、CUPTI activity span 与 activity duration sum。
 - `experiments/01_sol_cupti_span/`：在物理 GPU 1 上对比 SOL selected span、
   activity duration sum 和 CUDA Event，并验证动态 activity attribution。
 - `experiments/02_sol_applicability/`：SOL single/multi-kernel Phase A
