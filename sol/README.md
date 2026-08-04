@@ -23,6 +23,10 @@ activity duration sum。
 
 - [SOL timing semantics](../docs/06-sol-timing-semantics.md)
 - [Inter-kernel gap proof](inter-kernel-gap-proof.md)
+- [Async prepare、timestamp window 与 activity attribution](async-prepare-attribution-window.md)
+  ：解释 setup/L2 flush 为什么可能进入 timed candidate window、SOL 如何依靠
+  discovery sequence 排除它们，以及 sync-before-timestamp 与 SOL-style async prepare
+  的 A/B 实验设计。
 
 ## 实验
 

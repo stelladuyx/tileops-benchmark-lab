@@ -33,6 +33,9 @@ TileOps 的 benchmark 规范。当前阶段只发布 CUPTI 官方资料梳理和
 ## 仓库结构
 
 - `sol/`：SOL-ExecBench 调研入口、已确认语义和专题实验结论。
+- `sol/async-prepare-attribution-window.md`：区分 CUPTI collection、CPU timestamp
+  candidate window、selected activity sequence 和最终 span，分析 SOL async prepare
+  中 setup/L2 flush noise 的排除机制、误归因风险与 sync/async A/B 设计。
 - `docs/00-current-tileops-benchmark.md`：当前 TileOps 的 CUPTI/Kineto 主路径和
   CUDA Event fallback 条件。
 - `docs/01-cupti-official-map.md`：官方入口、API 地图、版本差异和推荐阅读顺序。
