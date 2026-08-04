@@ -377,7 +377,20 @@ FlashInfer CUPTI：
 FlagGems 的公开目标是以统一 PyTorch 接口覆盖多种硬件 backend，而不是只面向 NVIDIA
 CUDA。项目范围和 backend 列表见
 [`README.md#L31-L55`](https://github.com/flagos-ai/FlagGems/blob/28b0092ca32fda5725389f3fa77bc2a4d74beb59/README.md#L31-L55)。
-CUPTI 是 NVIDIA 专属接口，因此不适合作为所有 FlagGems backend 的共同默认依赖。
+CUPTI 是 NVIDIA 专属接口，因此不适合作为所有 FlagGems backend 的共同默认依赖；在
+AMD、Ascend、MUSA、Cambricon、Kunlunxin 等 backend 上，也不能提供与 NVIDIA CUPTI
+activity 完全相同的实现和字段。
+
+这里还要精确区分两层：
+
+- FlagGems 公共 `kernel` mode 的入口是 Triton `do_bench`，不是直接调用 CUPTI；
+- 在 CUDA backend 上，这条路径表现为 device Event/CUDA Event timing；Ascend 则在源码中
+  显式改用 `triton.backends.ascend.testing.do_bench_npu`。分支见
+  [`benchmark/base.py#L303-L323`](https://github.com/flagos-ai/FlagGems/blob/28b0092ca32fda5725389f3fa77bc2a4d74beb59/benchmark/base.py#L303-L323)。
+
+所以“FlagGems 选择 CUDA Event”是针对本文讨论的 NVIDIA/CUDA 路径的简称。更一般的说法
+应是：FlagGems 倾向采用各 backend 可提供的统一 device-timer abstraction，而不是把
+NVIDIA CUPTI 作为跨平台 benchmark contract。
 
 公共 runner 使用同一个 `get_latency()` 分别测 baseline callable 和 FlagGems callable，
 再计算 speedup，见
@@ -385,6 +398,23 @@ CUPTI 是 NVIDIA 专属接口，因此不适合作为所有 FlagGems backend 的
 Event 包围完整 callable，因而保留设备时间线中落在该边界内的首 kernel 前等待/dispatch、
 kernel execution、内部 gap 和末尾边界。这更接近一次 device-side operator invocation，
 小 kernel 的边界成本也可能成为结果的重要部分。
+
+从 benchmark 的比较对象看，这种选择还有三个实际效果：
+
+1. **同一调用边界比较 baseline 与替换实现。** PyTorch baseline 和 FlagGems operator 都以
+   完整 `fn()` 进入相同的 `get_latency()`，不要求两个实现必须产生相同 kernel 数量或
+   kernel 名称；一个实现做 fusion、另一个发出多个 kernel 时，仍可比较完整调用。
+2. **小算子的 device-side 边界成本不会被主动剥离。** 对 elementwise、reduction 等短
+   kernel，Event 到第一条 activity 的等待/dispatch envelope 可能与 execution 同量级；
+   保留它更接近 eager operator 的一次设备调用成本。
+3. **大算子和 multi-kernel op 无需切换 reduction。** 大 kernel 中 boundary 占比自然变小；
+   multi-kernel operator 则直接得到完整 callable 的 Event span，内部 dependency/dispatch
+   gap 也留在结果中。
+
+这并不表示 FlagGems 要把所有 overhead 混成一个数。它另外提供 `operator`、`wrapper`
+和 `cudagraph` mode，分别观察同步 host wall、runtime enqueue/wrapper 和 graph replay。
+也就是说，它用 mode 区分 measurement layer；默认 `kernel` mode 只是选了一个容易在多
+backend 上实现、又能包住完整 operator callable 的 device-time contract。
 
 FlagGems 没有在源码注释中直接声明“因上述原因选择 Event”；这里关于设计动机的描述是
 根据其多 backend 定位、公共 runner 结构和四种 timing mode 作出的解释。可直接确认的事实是：
@@ -397,18 +427,73 @@ FlashInfer 是面向 NVIDIA GPU 的推理 kernel 库，并为同类 workload 提
 backend。其 benchmark 说明将目标描述为比较不同 kernel backend 的 API performance，见
 [`benchmarks/README.md#L1-L10`](https://github.com/flashinfer-ai/flashinfer/blob/02ccd88cb6d3b53f49be828a3d525dbb1bfd152c/benchmarks/README.md#L1-L10)。
 
+这与 FlagGems 的比较轴不同：FlashInfer 的 `fa2/fa3/cudnn/cutlass/trtllm/cublas/triton`
+等 backend 都运行在 NVIDIA CUDA 平台上。使用 NVIDIA 专属 CUPTI 不会破坏其目标平台的
+统一性，反而可以让不同 backend 最终产生的 kernel activities 落到同一种硬件时间线上。
+项目 README 对 NVIDIA GPU 架构、CUDA 版本以及多个 backend 的定位见
+[`README.md#L18-L26`](https://github.com/flashinfer-ai/flashinfer/blob/02ccd88cb6d3b53f49be828a3d525dbb1bfd152c/README.md#L18-L26) 和
+[`README.md#L227-L231`](https://github.com/flashinfer-ai/flashinfer/blob/02ccd88cb6d3b53f49be828a3d525dbb1bfd152c/README.md#L227-L231)。
+
 FlashInfer 的 CUPTI runner 明确把 CUPTI 描述为实际 GPU kernel execution time，并把它
 用于更精确的 kernel performance measurement；不支持时再 fallback 到 Event，见
 [`flashinfer/testing/utils.py#L937-L971`](https://github.com/flashinfer-ai/flashinfer/blob/02ccd88cb6d3b53f49be828a3d525dbb1bfd152c/flashinfer/testing/utils.py#L937-L971)。
 因此默认 CUPTI 更集中反映 kernel/backend 实现本身，避免把首 activity 开始前的外侧
 Event boundary 混入 TFLOPS、带宽等派生指标。对很短的 kernel，这种边界差异占比尤其大。
 
+FlashInfer 自己对三个 backend 的用途给出了更直接的说明：
+
+- CUPTI：`pure GPU kernel time`，作为最精确的 kernel measurement；
+- CUDA Graph：通过 graph 内多次调用摊薄 launch overhead；
+- direct CUDA Event：最简单，源码将其描述为 `launch + execution`。
+
+见
+[`flashinfer/testing/utils.py#L1565-L1580`](https://github.com/flashinfer-ai/flashinfer/blob/02ccd88cb6d3b53f49be828a3d525dbb1bfd152c/flashinfer/testing/utils.py#L1565-L1580)。
+direct Event 函数还明确说它适合 execution 相比 launch overhead 足够大的 kernel，见
+[`flashinfer/testing/utils.py#L790-L839`](https://github.com/flashinfer-ai/flashinfer/blob/02ccd88cb6d3b53f49be828a3d525dbb1bfd152c/flashinfer/testing/utils.py#L790-L839)。
+这些注释说明 FlashInfer 是有意提供“保留边界”“摊薄边界”和“从 activity 开始计时”
+三种观察方式，而统一 CLI 把 CUPTI 设为默认，是把 kernel/backend 执行质量放在主指标上。
+
+从使用场景看，这种默认还有以下效果：
+
+1. **适合比较异构实现产生的 kernel sequence。** 不同 backend 可能有不同 wrapper、launch
+   路径和 kernel 数；CUPTI correlation/activity attribution 在归因成功时可以只选择该轮
+   workload 的 GPU activities，再用统一的 first-start/last-end reduction。
+2. **吞吐率派生量更集中反映 kernel work。** benchmark 会用 latency 计算 TFLOPS、带宽等
+   指标；排除首 activity 前的 outer boundary，可以减少很短 kernel 的固定边界对这些指标
+   的影响。这是根据计时实现和 benchmark 输出作出的解释，不是作者逐字陈述。
+3. **CUDA Graph 是独立的 execution-mode 维度。** FlashInfer 强调低延迟 serving 和
+   CUDA Graph 兼容；统一 CLI 默认没有启用 `--no_cuda_graph`，兼容的 routine 因而可能测
+   graph replay 产生的 activities。此时 CUPTI 仍测 activity span，而不是 graph replay
+   command 到第一条 activity 的完整 Event span。
+
+源码注释主要说 CUPTI 排除 **CPU-side launch overhead**。根据它实际使用
+`activity.start/end` 做 min/max，我们还能确认它也不包含第一条 activity 开始前的 outer
+GPU-side queue/dispatch boundary；这是对 timestamp reduction 的代码解释，不应伪装成
+FlashInfer 作者对所有 GPU front-end 阶段作出的文字承诺。
+
 但 CUPTI activity span 也不是“完全不计算 GPU-side overhead”：multi-kernel 情况下，
 第一条 activity 开始以后、最后一条 activity 结束以前的 dependency wait、device idle、
 stream gap 和内部 dispatch gap仍然包含在 min/max span 中。它只排除了首 activity 之前与
 末 activity 之后的 outer boundary。
 
-### 4.3 overhead 必须按层次描述
+### 4.3 两种选择背后的比较目标
+
+| 维度 | FlagGems 公共 runner | FlashInfer 统一 runner |
+| --- | --- | --- |
+| 平台范围 | 多种硬件 backend | NVIDIA CUDA GPU |
+| 主要比较对象 | PyTorch baseline operator vs FlagGems replacement | 同一 workload 的多个 kernel backend |
+| 默认抽象 | backend device timer；CUDA 上为 Event span | CUPTI attributed activity span |
+| 默认问题 | 一次完整 callable 的 device invocation 多久 | 已归因 kernel sequence 的执行 envelope 多久 |
+| outer GPU boundary | CUDA Event 路径计入窗口内可见部分 | first activity 前、last activity 后不计 |
+| multi-kernel internal gap | 计入 | 计入 |
+| 其他层次 | operator/wrapper/cudagraph mode | direct Event/Graph Event/部分 host-wall 脚本 |
+
+因此，两个项目不是根据“小算子用一种、大算子用另一种”来选择默认策略。它们都把同一个
+默认 contract 应用于不同大小和不同 kernel 数的 workload；差异来自项目平台范围和主
+benchmark 想回答的问题。FlagGems 更偏向完整 operator invocation 的可移植比较，
+FlashInfer 更偏向 NVIDIA kernel/backend activity execution 的精确归因。
+
+### 4.4 overhead 必须按层次描述
 
 两个默认 contract 的关系可写为：
 
