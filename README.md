@@ -32,6 +32,7 @@ TileOps 的 benchmark 规范。当前阶段只发布 CUPTI 官方资料梳理和
 
 ## 仓库结构
 
+- `sol/`：SOL-ExecBench 调研入口、已确认语义和专题实验结论。
 - `docs/00-current-tileops-benchmark.md`：当前 TileOps 的 CUPTI/Kineto 主路径和
   CUDA Event fallback 条件。
 - `docs/01-cupti-official-map.md`：官方入口、API 地图、版本差异和推荐阅读顺序。
@@ -52,6 +53,8 @@ TileOps 的 benchmark 规范。当前阶段只发布 CUPTI 官方资料梳理和
   activity duration sum 和 CUDA Event，并验证动态 activity attribution。
 - `experiments/02_sol_applicability/`：SOL single/multi-kernel Phase A
   ground-truth runner 和 strict activity validator。
+- `experiments/03_sol_gap_proof/`：通过可控 gap sweep 和 CUPTI timestamp closure
+  验证 SOL multi-activity span 是否包含 kernel 间 GPU gap。
 - `notes/2026-07-31-cupti-first-pass.md`：本次探索记录和待验证问题。
 
 本机 CUDA 12.9 的官方 C/C++ samples 位于：

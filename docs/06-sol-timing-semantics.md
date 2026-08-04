@@ -144,3 +144,12 @@ Event 的 event-to-event stream span，而不是上述 CUPTI selected activity s
 count/order、同名重复 activity、helper activity、多 stream completion、CUDA
 Graph 和外部 baseline 仍需验证。实验设计见
 [SOL single/multi-kernel 适用性实验](06-sol-single-multi-applicability-plan.md)。
+
+固定、完整选择的两 kernel gap sweep 已完成。1050 个 strict-valid samples 满足：
+
+```text
+SOL span - selected duration sum = actual GPU gap
+```
+
+实验过程、线性拟合和适用边界见
+[SOL inter-kernel gap proof](../sol/inter-kernel-gap-proof.md)。
