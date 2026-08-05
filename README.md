@@ -29,6 +29,11 @@ TileOps 的 benchmark 规范。当前阶段只发布 CUPTI 官方资料梳理和
   instrumentation 获取时间，对短 kernel 尤其需要实测扰动。
 - CUDA Event、CUPTI Activity 和 wall clock 测量的是不同 contract。
   TileOps 的最终规范不应把三者混成一个“latency”字段。
+- CUDA Event 与 HIP Event 都是在指定 stream 上记录 device timestamps，可以抽象成
+  同一个 device-event span contract；multi-stream operator 仍需显式 completion join。
+- CUPTI attributed activity span 不只有 SOL 使用：固定版本的 FlashInfer 默认 CUPTI
+  runner 也采用 `max(selected.end)-min(selected.start)`。这一 contract 可在 AMD 上用
+  ROCprofiler-SDK 复现，但不能直接复用 CUPTI 实现。
 
 ## 仓库结构
 
@@ -56,6 +61,9 @@ TileOps 的 benchmark 规范。当前阶段只发布 CUPTI 官方资料梳理和
   FlashInfer 对小/大/multi-kernel workload 的公共计时路径，重点区分 CUDA Event
   GPU-side launch/dispatch envelope、CUPTI activity span 与 activity duration sum，
   并分析两者因平台范围和主要比较对象不同而选择不同默认策略的原因。
+- `docs/08-cross-backend-event-and-activity-span.md`：核对 CUDA Event 与 HIP Event 的
+  stream-marker 语义，区分 device-event span 和 attributed activity span，纠正
+  “activity span 只有 SOL”的说法，并分析 CUPTI/ROCprofiler 的未来跨 backend 映射。
 - `experiments/01_sol_cupti_span/`：在物理 GPU 1 上对比 SOL selected span、
   activity duration sum 和 CUDA Event，并验证动态 activity attribution。
 - `experiments/02_sol_applicability/`：SOL single/multi-kernel Phase A
